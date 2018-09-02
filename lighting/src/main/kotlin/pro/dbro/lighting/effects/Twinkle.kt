@@ -37,10 +37,10 @@ class Twinkle(
 
         if (seed < 0.5) {
             val sin = Math.max(0.0, (0.75 * Math.sin(t)))
-            pixel.tween(pixelA, sin)
+            pixel.tween(pixelA, sin.toFloat())
         } else {
             val cos = Math.max(0.0, (0.75 * Math.cos(t)))
-            pixel.tween(pixelB, cos)
+            pixel.tween(pixelB, cos.toFloat())
         }
 
         if (Math.random() < reseedProbability) {

@@ -2,6 +2,7 @@ package pro.dbro.lighting
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 import com.heroicrobot.dropbit.registry.DeviceRegistry
+import pro.dbro.lighting.effects.Flash
 import pro.dbro.lighting.effects.Twinkle
 import java.util.*
 import kotlin.collections.ArrayList
@@ -20,6 +21,7 @@ class Lighting {
     private val pixelOff = Pixel()
 
     val twinkle = Twinkle(pixelA = pixelFire, pixelB = pixelRedFire, periodTicks = 100)
+    val flash = Flash()
 
     private val ticksPerTween = 30.0
 
@@ -76,6 +78,14 @@ class Lighting {
                 for (pos in pixelStartIdx until strip.length) {
 
                     twinkle.draw(tick, strip, pos, pixel)
+
+                    if (tick % 120L == 0L) {
+                        println("Flash!")
+                        flash.flash(1f, flashPixel = pixelRedFire)
+                    }
+
+                    flash.draw(tick, strip, pos, pixel)
+
                     strip.setPixel(pixel, pos)
                     // Barber pole style
 //                    val pos2: Long = ((pos + intTick) % 9).toLong()
