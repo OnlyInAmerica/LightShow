@@ -2,6 +2,12 @@ package pro.dbro.lighting
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 
+private val pixelOff = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
+
+fun Pixel.off() {
+    this.setColor(pixelOff)
+}
+
 fun Pixel.tween(src: Pixel, factor: Float) {
     this.red = ((src.red.toInt() and 0xFF) * factor).toByte()
     this.green = ((src.green.toInt() and 0xFF) * factor).toByte()

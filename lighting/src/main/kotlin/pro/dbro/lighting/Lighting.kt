@@ -2,8 +2,7 @@ package pro.dbro.lighting
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 import com.heroicrobot.dropbit.registry.DeviceRegistry
-import pro.dbro.lighting.effects.Flash
-import pro.dbro.lighting.effects.Twinkle
+import pro.dbro.lighting.effects.*
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -14,13 +13,21 @@ class Lighting {
     private val observer = TestObserver()
 
     private val pixelRed = Pixel(255.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
-    private val pixelBright = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 255.toByte())
+    private val pixelBlue = Pixel(0.toByte(), 100.toByte(), 255.toByte(), 0.toByte(), 0.toByte())
+    private val pixelGreen = Pixel(0.toByte(), 255.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
+    private val pixelBright = Pixel(255.toByte(), 255.toByte(), 255.toByte(), 255.toByte(), 255.toByte())
     private val pixelRedFire = Pixel(255.toByte(), 75.toByte(), 0.toByte(), 200.toByte(), 17.toByte())
     private val pixelFire = Pixel(129.toByte(), 75.toByte(), 0.toByte(), 0xFF.toByte(), 17.toByte())
     private val pixel = Pixel(129.toByte(), 75.toByte(), 0.toByte(), 0xFF.toByte(), 17.toByte())
     private val pixelOff = Pixel()
 
-    val twinkle = Twinkle(pixelA = pixelFire, pixelB = pixelRedFire, periodTicks = 100)
+    val plainWalk = Walk(pixelA = pixelRed, periodTicks = 420)
+    val rain = Rain(pixelA = pixelRed, pixelB = pixelBlue)
+    val walk = HorizontalWalk(pixelMap = hashMapOf(Pair(0, pixelRed)), periodTicks = 10)
+    val gradient = Gradient(pixelA = pixelGreen, pixelB = pixelBlue, periodTicks = 480)
+    val twinkle = Twinkle(pixelA = pixelBlue, pixelB = pixelGreen, periodTicks = 480, reseedProbability = 0f, flickerIntensity = 0f)
+    val blend = Blend(pixelA = pixelBlue, pixelB = pixelGreen, periodTicks = 480, reseedProbability = 0f, flickerIntensity = 0f)
+    val fire = Twinkle(pixelA = pixelFire, pixelB = pixelRedFire, periodTicks = 200)
     val flash = Flash()
 
     private val ticksPerTween = 30.0
@@ -76,15 +83,18 @@ class Lighting {
 //            val intTick = Math.floor(tick / 2.0)
             strips.forEach { strip ->
                 for (pos in pixelStartIdx until strip.length) {
+//                    plainWalk.draw(tick, strip, pos, pixel)
+//                    rain.draw(tick, strip, pos, pixel)
+//                    walk.draw(tick, strip, pos, pixel)
+//                    gradient.draw(tick, strip, pos, pixel)
+//                    twinkle.draw(tick, strip, pos, pixel)
+//                    blend.draw(tick, strip, pos, pixel)
+                    fire.draw(tick, strip, pos, pixel)
 
-                    twinkle.draw(tick, strip, pos, pixel)
-
-                    if (tick % 120L == 0L) {
-                        println("Flash!")
-                        flash.flash(1f, flashPixel = pixelRedFire)
-                    }
-
-                    flash.draw(tick, strip, pos, pixel)
+//                    if (tick % 240L == 0L) {
+//                        flash.flash(1f, flashPixel = pixelBright, durationTicks = 120)
+//                    }
+//                    flash.draw(tick, strip, pos, pixel)
 
                     strip.setPixel(pixel, pos)
                     // Barber pole style
@@ -177,6 +187,6 @@ public fun main(args: Array<String>) {
     var tick = 0L
     while (true) {
         lighting.draw(tick++)
-        Thread.sleep(30)
+        Thread.sleep(16)
     }
 }
