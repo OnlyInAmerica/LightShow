@@ -4,9 +4,10 @@ import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 import com.heroicrobot.dropbit.devices.pixelpusher.Strip
 import pro.dbro.lighting.Effect
 import pro.dbro.lighting.ceil
+import pro.dbro.lighting.off
 import pro.dbro.lighting.tween
 
-class Flash : Effect {
+class HorizontalWalkFlash(var pixelMod: Int = 9) : Effect {
 
     var flashPixel: Pixel? = null
     var flashDurationTicks = 0L
@@ -34,7 +35,13 @@ class Flash : Effect {
             }
 
             flashPixel?.let {
-                pixel.tween(pixel, 1f - flashCurIntensity, it, flashCurIntensity)
+                val group = stripIdx % pixelMod
+
+                val groupId = ((group + (tick / (flashDurationTicks.toFloat() / pixelMod))) % pixelMod).toInt()
+
+                if (groupId == 0) {
+                    pixel.tween(pixel, 1f - flashCurIntensity, it, flashCurIntensity)
+                }
             }
 
             flashCurIntensity = decay(tick - flashStartTick, flashMaxIntensity, -flashMaxIntensity, flashDurationTicks)

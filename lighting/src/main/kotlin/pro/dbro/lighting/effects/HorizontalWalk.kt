@@ -8,7 +8,8 @@ import pro.dbro.lighting.off
 class HorizontalWalk(
         var pixelMap: HashMap<Int, Pixel>,
         var periodTicks: Long = 60,
-        var pixelMod: Int = 9
+        var pixelMod: Int = 9,
+        var additive: Boolean = false
 ) : Effect {
 
     override fun draw(tick: Long, strip: Strip, stripIdx: Int, pixel: Pixel) {
@@ -19,7 +20,7 @@ class HorizontalWalk(
 
         if (pixelMap.containsKey(groupId)) {
             pixel.setColor(pixelMap[groupId])
-        } else {
+        } else if (!additive) {
             pixel.off()
         }
     }

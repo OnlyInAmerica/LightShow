@@ -5,13 +5,10 @@ import com.heroicrobot.dropbit.devices.pixelpusher.Strip
 import pro.dbro.lighting.Effect
 import pro.dbro.lighting.tween
 
-class Twinkle(
-        var pixelA: Pixel,
-        var pixelB: Pixel,
-        var reseedProbability: Float = 0.03f,
-        var flickerIntensity: Float = 0.5f,
-        var flickerReseedMod: Int = 2,
-        var periodTicks: Long = 60
+class Sparkle(
+        var pixelSparkle: Pixel,
+        var onFraction: Float = 0.5f,
+        var periodTicks: Long = 3
 ) : Effect {
 
     val pixelSeed = HashMap<String, Float>(240)
@@ -34,27 +31,13 @@ class Twinkle(
         val key = keyForStrip(strip, stripIdx)
         val seed = getOrMakeSeed(key)
 
-        val flickerOrReseed: Boolean = tick % flickerReseedMod.toLong() == 0L
-
-        val t = 2 * Math.PI * (seed + (tick / periodTicks.toFloat()))
-        if (flickerOrReseed) {
-            t + (2 * Math.PI * (flickerIntensity * (2 * Math.random() - 1)))
-        }
-
-        if (seed < 0.5) {
-            val sin = 0.5 + 0.50 * Math.sin(t)
-            if (sin.toFloat() > 0.5) {
-                pixel.setColor(pixelA)
-            } else {
-                pixel.setColor(pixelB)
-            }
-//            pixel.tween(pixelA, sin.toFloat())
+        if (seed < onFraction) {
+            pixel.setColor(pixelSparkle)
         } else {
-            val cos = 0.5 + 0.50 * Math.cos(t)
-            pixel.tween(pixelB, cos.toFloat())
+            pixel.setColor(pixelOff)
         }
 
-        if (flickerOrReseed && Math.random() < reseedProbability) {
+        if (tick % periodTicks == 0L) { //Math.random() < reseedProbability) {
             pixelSeed[key] = (Math.random() * Math.PI * 2).toFloat()
         }
     }

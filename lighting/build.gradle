@@ -24,6 +24,12 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compile 'org.processing:core:3.3.7'
     compile 'org.robolectric:junit:4.0-alpha-3'
+    testImplementation(
+            'org.junit.jupiter:junit-jupiter-api:5.1.0'
+    )
+    testRuntimeOnly(
+            'org.junit.jupiter:junit-jupiter-engine:5.1.0'
+    )
 }
 
 compileKotlin {

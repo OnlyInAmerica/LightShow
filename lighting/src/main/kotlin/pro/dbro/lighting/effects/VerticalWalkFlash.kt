@@ -6,7 +6,7 @@ import pro.dbro.lighting.Effect
 import pro.dbro.lighting.ceil
 import pro.dbro.lighting.tween
 
-class Flash : Effect {
+class VerticalWalkFlash() : Effect {
 
     var flashPixel: Pixel? = null
     var flashDurationTicks = 0L
@@ -34,20 +34,23 @@ class Flash : Effect {
             }
 
             flashPixel?.let {
-                pixel.tween(pixel, 1f - flashCurIntensity, it, flashCurIntensity)
+                val posFrac = (stripIdx) / (strip.length.toFloat())
+                var tickMod = (tick - flashStartTick)
+                tickMod *= 4
+                val t = Math.PI * 2 * (posFrac + ((tickMod) / flashDurationTicks.toFloat()))
+
+                val cos = 0.5f + (0.5 * Math.cos(t)).toFloat()
+                if (cos > 0.7 && t > (3 * Math.PI / 2)) {
+                    pixel.tween(pixel, 1f - flashCurIntensity, it, flashCurIntensity)
+                }
             }
 
-            flashCurIntensity = decay(tick - flashStartTick, flashMaxIntensity, -flashMaxIntensity, flashDurationTicks)
+            flashCurIntensity = decay5(tick - flashStartTick, flashMaxIntensity, -flashMaxIntensity, flashDurationTicks)
             if (flashCurIntensity < 0.01f) {
                 // Last flash draw
                 reset()
             }
         }
-    }
-
-    private fun decay(elapsedTime: Long, start: Float, delta: Float, duration: Long): Float {
-        val time = (elapsedTime / duration.toFloat()) - 1
-        return delta * (time * time * time * time * time + 1) + start
     }
 
     private fun reset() {
