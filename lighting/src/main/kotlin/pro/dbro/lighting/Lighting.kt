@@ -134,10 +134,12 @@ class Lighting {
         val values = Program.values()
         val lastOrdinal = values.last().ordinal
         val newOrdinal = (curentProgram.ordinal + 1) % (lastOrdinal + 1)
-        curentProgram = values[newOrdinal]
+        switchProgram(newProgram = values[newOrdinal])
+    }
 
+    fun switchProgram(newProgram: Program) {
+        curentProgram = newProgram
         println("Changing program to " + curentProgram.name)
-
     }
 
     fun pulse() {
@@ -281,36 +283,85 @@ fun clamp(value: Double, min: Double, max: Double): Double {
     return Math.max(min, Math.min(value, max))
 }
 
+var tickAdj = 1L
+    set(value) {
+        println("TickAdj $value")
+        field = value
+    }
+
 public fun main(args: Array<String>) {
+
     val lighting = Lighting()
+
+    fun randEffect() {
+        val rand = Math.random()
+        when {
+            rand > 0.66 -> lighting.vWalkFlash()
+            rand > 0.33 -> lighting.walkFlash()
+            else -> lighting.flash()
+        }
+    }
 
     Thread(Runnable {
         var tick = 0L
         while (true) {
-            lighting.draw(tick++)
+            tick += tickAdj
+            lighting.draw(tick)
             Thread.sleep(16)
         }
     }).start()
 
     val sc = Scanner(System.`in`).useDelimiter("")
     while (true) {
-        val i = sc.next()
+        val i = sc.nextLine()
+        println("Read $i")
 
+        when (i) {
+            "'" -> {
+                println("Major")
+
+                lighting.switchProgram()
+                randEffect()
+            }
+            "f" -> lighting.flash()
+            "w" -> lighting.walkFlash()
+            "v" -> lighting.vWalkFlash()
+            "s" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.Sparkle)
+            }
+            "e" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.Earth)
+            }
+            "p" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.Purp)
+            }
+            "i" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.Fire)
+            }
+            "b" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.HGradient)
+            }
+            "g" -> {
+                randEffect()
+                lighting.switchProgram(Lighting.Program.VGradient)
+            }
+            "+" -> tickAdj += 3
+            "-" -> tickAdj -= 3
+            "0" -> tickAdj = 1
+            else -> {
+                println("Minor")
+                lighting.pulse()
+            }
+        }
 //        lighting.pulse()
 //        lighting.vWalkFlash()
 
-        val rand = Math.random()
 
-        lighting.switchProgram()
-
-
-
-        when {
-            rand > 0.66 -> lighting.vWalkFlash()
-            rand > 0.33 -> lighting.walkFlash()
-//            rand > 0.25 -> lighting.pulse()
-            else -> lighting.flash()
-        }
 //        when (i) {
 //            "p" -> lighting.switchProgram()
 //            "w" -> lighting.walkFlash()
