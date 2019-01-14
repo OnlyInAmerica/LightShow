@@ -8,18 +8,18 @@ import pro.dbro.lighting.tween
 
 class Pulse : Effect {
 
-    var pulsePixel: Pixel? = null
     var flashDurationTicks = 0L
     var flashStartTick = 0L
     var flashMaxIntensity = 0f
     var flashCurIntensity = 0f
+    var boostPixel: Pixel? = null
 
-    fun pulse(intensity: Float, durationTicks: Long = 60, pulsePixel: Pixel? = null) {
+    fun pulse(intensity: Float, durationTicks: Long = 40, boostPixel: Pixel? = null) {
         reset()
         flashMaxIntensity = intensity
         flashCurIntensity = intensity
         flashDurationTicks = durationTicks
-        this.pulsePixel = pulsePixel
+        this.boostPixel = boostPixel
     }
 
     override fun draw(tick: Long, strip: Strip, stripIdx: Int, pixel: Pixel) {
@@ -29,7 +29,7 @@ class Pulse : Effect {
                 flashStartTick = tick
             }
 
-            pixel.tween(pixel, 1f - flashCurIntensity, pixel.ceil(), flashCurIntensity)
+            pixel.tween(pixel, 1f - flashCurIntensity, pixel.ceil(boostPixel), flashCurIntensity)
 
             val time = (2 * Math.PI) * ((tick - flashStartTick) / flashDurationTicks.toFloat())// - (Math.PI / 2f)
             flashCurIntensity = (0.5f * flashMaxIntensity) + (0.5f * flashMaxIntensity) * Math.sin(time).toFloat()//decay(tick - flashStartTick, flashMaxIntensity, -flashMaxIntensity, flashDurationTicks)

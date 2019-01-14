@@ -32,11 +32,16 @@ class Lighting {
     private val pixelRedFireWw = Pixel(255.toByte(), 17.toByte(), 0.toByte(), 30.toByte(), 0.toByte()) // Pixel(156.toByte(), 17.toByte(), 0.toByte(), 8.toByte(), 0.toByte())
     private val pixelFireWw = Pixel(57.toByte(), 13.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
 
+    // Pixel additives (used as flash argument)
+    private val bigBoost = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 255.toByte(), 255.toByte())
+    private val mediumBoost = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 150.toByte(), 20.toByte())
+    private val smallBoost = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 70.toByte(), 2.toByte())
+
     enum class Program {
-        Fire, VGradient, HGradient, /*Blend,*/ Purp, Earth, Sparkle//, Rain
+        Fire, VGradient, HGradient, /*Blend,*/ Purp, Earth, Sparkle, Rainbow//, Rain
     }
 
-    private var curentProgram = Program.VGradient
+    private var currentProgram = Program.Earth
 
     private val nextProgramCol = hashMapOf(
             Pair(Program.VGradient, pixelRed),
@@ -45,7 +50,8 @@ class Lighting {
 //            Pair(Program.Blend, pixelPurp),
             Pair(Program.Purp, pixelGreen),
             Pair(Program.Earth, pixelWhite),
-            Pair(Program.Sparkle, pixelFire)
+            Pair(Program.Sparkle, pixelRed),
+            Pair(Program.Rainbow, pixelFire)
     )
 
     /*
@@ -62,6 +68,8 @@ class Lighting {
     val twinkle = Twinkle(pixelA = pixelBlue, pixelB = pixelGreen, periodTicks = 480, reseedProbability = 0f, flickerIntensity = 0f)
 
     val fastTwinkle = Sparkle(pixelSparkle = pixelWhite, onFraction = .3f)
+
+    val rainbow = Rainbow()
 
     val blend = Blend(pixelA = pixelRed, pixelB = pixelYellow, periodTicks = 480, reseedProbability = 0f, flickerIntensity = 0f)
     val purp = Blend(pixelA = pixelLightPurple, pixelB = pixelRed, periodTicks = 480, reseedProbability = 0f, flickerIntensity = 0f)
@@ -108,24 +116,30 @@ class Lighting {
 //        twinkle.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 120)
 //    }
 
-    fun flash() {
-        println("Flash")
-        val nextProgPixel = Pixel(nextProgramCol[curentProgram])
-        nextProgPixel.white = 200.toByte()
+    fun smallFlash() {
+        println("Small flash")
+        flash(boostPixel = mediumBoost)
+    }
 
-        flash.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 120)
+    fun largeFlash() {
+        println("Large flash")
+        flash(boostPixel = bigBoost)
+    }
+
+    fun flash(boostPixel: Pixel?, intensity: Float = flashIntensity) {
+        flash.flash(intensity, boostPixel = boostPixel, durationTicks = 120)
     }
 
     fun walkFlash() {
         println("H Walk flash")
-        val nextProgPixel = Pixel(nextProgramCol[curentProgram])
+        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
         nextProgPixel.white = 200.toByte()
         walkFlash.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 60)
     }
 
     fun vWalkFlash() {
         println("V Walk flash")
-        val nextProgPixel = Pixel(nextProgramCol[curentProgram])
+        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
         nextProgPixel.white = 200.toByte()
         vWalkFlash.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 90)
     }
@@ -133,20 +147,25 @@ class Lighting {
     fun switchProgram() {
         val values = Program.values()
         val lastOrdinal = values.last().ordinal
-        val newOrdinal = (curentProgram.ordinal + 1) % (lastOrdinal + 1)
+        val newOrdinal = (currentProgram.ordinal + 1) % (lastOrdinal + 1)
         switchProgram(newProgram = values[newOrdinal])
     }
 
     fun switchProgram(newProgram: Program) {
-        curentProgram = newProgram
-        println("Changing program to " + curentProgram.name)
+        currentProgram = newProgram
+        println("Changing program to " + currentProgram.name)
     }
 
-    fun pulse() {
-        pulse.pulse(intensity = flashIntensity)
+    fun pulse(intensity: Float = flashIntensity) {
+        pulse.pulse(intensity = intensity, boostPixel = smallBoost)
     }
 
-    fun draw(tick: Long) {
+    /**
+     *
+     * @param tick should be regular and monotonic. Used for transitions.
+     * @param programTick can change in timescale and direction for fun times.
+     */
+    fun draw(tick: Long, programTick: Long = tick) {
         if (observer.hasStrips) {
 
             if (!didSetup) {
@@ -170,16 +189,17 @@ class Lighting {
             strips.forEach { strip ->
                 for (pos in pixelStartIdx until strip.length) {
 
-                    when (curentProgram) {
-                        Lighting.Program.VGradient -> gradient.draw(tick, strip, pos, pixel)
-                        Lighting.Program.HGradient -> hGradient.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Fire -> fireWw/*fire*/.draw(tick, strip, pos, pixel)
+                    when (currentProgram) {
+                        Lighting.Program.VGradient -> gradient.draw(programTick, strip, pos, pixel)
+                        Lighting.Program.HGradient -> hGradient.draw(programTick, strip, pos, pixel)
+                        Lighting.Program.Fire -> fireWw/*fire*/.draw(programTick, strip, pos, pixel)
 //                        Lighting.Program.Blend -> blend.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Purp -> purp.draw(tick, strip, pos, pixel)
+                        Lighting.Program.Purp -> purp.draw(programTick, strip, pos, pixel)
 //                        Lighting.Program.Walk -> walk.draw(tick, strip, pos, pixel)
 //                        Lighting.Program.Rain -> rain.draw(tick, strip, pos, pixel)
                         Lighting.Program.Earth -> earth.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Sparkle -> fastTwinkle.draw(tick, strip, pos, pixel)
+                        Lighting.Program.Sparkle -> fastTwinkle.draw(programTick, strip, pos, pixel)
+                        Lighting.Program.Rainbow -> rainbow.draw(programTick, strip, pos, pixel)
                     }
 //                    fastTwinkle.draw(tick, strip, pos, pixel)
 
@@ -283,81 +303,140 @@ fun clamp(value: Double, min: Double, max: Double): Double {
     return Math.max(min, Math.min(value, max))
 }
 
-var tickAdj = 1L
+var programTickAdj = 1L
     set(value) {
         println("TickAdj $value")
         field = value
     }
 
+val controlServer = ControlServer()
+var controlServerMod = 1
+    set(value) {
+        if (value == 0) {
+            // modulus cannot be zero
+            println("controlServerMod at min: $value")
+            return
+        }
+        println("controlServerMod at: $value")
+        field = value
+    }
+var controlServerPing = true
+var controlServerCount = 0
+
+var lastCommand = ""
+
 public fun main(args: Array<String>) {
 
     val lighting = Lighting()
 
-    fun randEffect() {
-        val rand = Math.random()
-        when {
-            rand > 0.66 -> lighting.vWalkFlash()
-            rand > 0.33 -> lighting.walkFlash()
-            else -> lighting.flash()
-        }
-    }
-
+    // Render thread
     Thread(Runnable {
         var tick = 0L
+        var renderTick = 0L
         while (true) {
-            tick += tickAdj
-            lighting.draw(tick)
+            renderTick += programTickAdj
+            lighting.draw(tick++, renderTick)
             Thread.sleep(16)
         }
     }).start()
 
-    val sc = Scanner(System.`in`).useDelimiter("")
-    while (true) {
-        val i = sc.nextLine()
-        println("Read $i")
+    // Control server thread
+    controlServer.listenAsync()
+    controlServer.listener = { command ->
 
-        when (i) {
-            "'" -> {
-                println("Major")
+        fun activate(command: String) {
+            val commandArr = command.split(",")
+            val intensity = commandArr[1].toFloat()
+            val command = commandArr[0]
+            println("Activate with '$command' intensity $intensity")
+            handleCommand(lighting, command, intensity)
+        }
 
-                lighting.switchProgram()
-                randEffect()
+        if (controlServerPing) {
+            if (controlServerCount++ % controlServerMod == 0) {
+                activate(command)
             }
-            "f" -> lighting.flash()
-            "w" -> lighting.walkFlash()
-            "v" -> lighting.vWalkFlash()
-            "s" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.Sparkle)
-            }
-            "e" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.Earth)
-            }
-            "p" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.Purp)
-            }
-            "i" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.Fire)
-            }
-            "b" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.HGradient)
-            }
-            "g" -> {
-                randEffect()
-                lighting.switchProgram(Lighting.Program.VGradient)
-            }
-            "+" -> tickAdj += 3
-            "-" -> tickAdj -= 3
-            "0" -> tickAdj = 1
-            else -> {
-                println("Minor")
-                lighting.pulse()
+        } else {
+            if (controlServerCount++ % controlServerMod != 0) {
+                activate(command)
             }
         }
+    }
+
+    val sc = Scanner(System.`in`).useDelimiter("")
+    while (true) {
+        var i = sc.nextLine()
+        println("Read '$i' last: '$lastCommand'")
+
+        if (i == "") {
+            println("Replaying $lastCommand")
+            i = lastCommand
+        }
+
+        handleCommand(lighting, i)
+    }
+}
+
+fun handleCommand(lighting: Lighting, command: String, intensity: Float = 0.8f) {
+    when (command) {
+        "'" -> {
+            println("Major")
+
+            lighting.switchProgram()
+            randEffect(lighting)
+        }
+        "c0" -> controlServerMod = 1
+        "cx" -> controlServerMod--
+        "cv" -> controlServerMod++
+        "cp" -> controlServerPing = !controlServerPing
+        "f" -> lighting.smallFlash()
+        "g" -> lighting.largeFlash()
+        "u" -> lighting.pulse(intensity)
+        "w" -> lighting.walkFlash()
+        "v" -> lighting.vWalkFlash()
+        "s" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.Sparkle)
+        }
+        "e" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.Earth)
+        }
+        "p" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.Purp)
+        }
+        "i" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.Fire)
+        }
+        "b" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.HGradient)
+        }
+        "o" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.VGradient)
+        }
+        "r" -> {
+            randEffect(lighting)
+            lighting.switchProgram(Lighting.Program.Rainbow)
+        }
+        "q" -> {
+            println("Quitting...")
+            controlServer.listenRequested = false
+            Thread.sleep(16)
+            System.exit(0)
+        }
+        "=" -> programTickAdj += 3
+        "-" -> programTickAdj -= 3
+        "0" -> programTickAdj = 1
+        else -> {
+            println("Minor")
+            lighting.pulse()
+        }
+    }
+    lastCommand = command
 //        lighting.pulse()
 //        lighting.vWalkFlash()
 
@@ -367,6 +446,13 @@ public fun main(args: Array<String>) {
 //            "w" -> lighting.walkFlash()
 //            else -> lighting.flash()
 //        }
+}
 
+fun randEffect(lighting: Lighting) {
+    val rand = Math.random()
+    when {
+        rand > 0.66 -> lighting.vWalkFlash()
+        rand > 0.33 -> lighting.walkFlash()
+        else -> lighting.flash(null)
     }
 }

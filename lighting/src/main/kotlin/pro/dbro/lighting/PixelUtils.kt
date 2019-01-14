@@ -49,7 +49,7 @@ fun Pixel.tween(src: Pixel, srcFactor: Float, dst: Pixel, dstFactor: Float) {
             ((dst.orangeInt()) * dstFactor)).toByte()
 }
 
-fun Pixel.ceil(): Pixel {
+fun Pixel.ceil(boost: Pixel? = null): Pixel {
     val max = Math.max(this.redInt(),
             Math.max(this.greenInt(),
                     Math.max(this.blueInt(),
@@ -61,5 +61,17 @@ fun Pixel.ceil(): Pixel {
 
     val copy = Pixel(this)
     copy.tween(copy, scale)
+    boost?.let { copy.boost(boost) }
     return copy
+}
+
+/**
+ * Add boost's component values to this Pixel
+ */
+fun Pixel.boost(boost: Pixel) {
+        this.red = (this.red + boost.red).toByte()
+        this.green = (this.green + boost.green).toByte()
+        this.blue = (this.blue + boost.blue).toByte()
+        this.white = (this.white + boost.white).toByte()
+        this.orange = (this.orange + boost.orange).toByte()
 }
