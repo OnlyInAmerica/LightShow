@@ -5,6 +5,7 @@ import com.heroicrobot.dropbit.registry.DeviceRegistry
 import pro.dbro.lighting.effects.*
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.math.sin
 
 
 class Lighting {
@@ -37,8 +38,11 @@ class Lighting {
     private val mediumBoost = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 150.toByte(), 20.toByte())
     private val smallBoost = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 70.toByte(), 2.toByte())
 
+    // Variable flash pixel
+    private val pixelFlash = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 255.toByte(), 255.toByte())
+
     enum class Program {
-        Fire, VGradient, HGradient, /*Blend,*/ Purp, Earth, Sparkle, Rainbow//, Rain
+        Fire, VGradient, HGradient, /*Blend,*/ Purp, Earth, Sparkle, Rainbow, Off //, Rain
     }
 
     private var currentProgram = Program.Earth
@@ -94,9 +98,9 @@ class Lighting {
     internal class TestObserver : Observer {
         var hasStrips = false
         override fun update(registry: Observable, updatedDevice: Any?) {
-            println("Registry changed!")
+            //println("Registry changed!")
             if (updatedDevice != null) {
-                println("Device change: $updatedDevice")
+                //println("Device change: $updatedDevice")
             }
             this.hasStrips = true
         }
@@ -116,6 +120,31 @@ class Lighting {
 //        twinkle.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 120)
 //    }
 
+    fun setFlashPixel(value: Float, useWhitePixels: Boolean = true) {
+
+        val t = 2 * Math.PI * (value)
+
+        val tOffset = if (useWhitePixels) (2 * Math.PI) / 5 else (2 * Math.PI) / 3
+
+        val red = sin(t) * 127 + 128
+        val green = sin(t + tOffset) * 127 + 128
+        val blue = sin(t + 2 * tOffset) * 127 + 128
+        val white = sin(t + 2 * tOffset) * 127 + 128
+        val orange = sin(t + 2 * tOffset) * 127 + 128
+
+        pixelFlash.red = red.toByte()
+        pixelFlash.green = green.toByte()
+        pixelFlash.blue = blue.toByte()
+
+        if (useWhitePixels) {
+            pixelFlash.white = white.toByte()
+            pixelFlash.orange = orange.toByte()
+        } else {
+            pixelFlash.white = 0
+            pixelFlash.orange = 0
+        }
+    }
+
     fun smallFlash() {
         println("Small flash")
         flash(boostPixel = mediumBoost)
@@ -132,16 +161,16 @@ class Lighting {
 
     fun walkFlash() {
         println("H Walk flash")
-        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
-        nextProgPixel.white = 200.toByte()
-        walkFlash.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 60)
+//        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
+//        nextProgPixel.white = 200.toByte()
+        walkFlash.flash(flashIntensity, flashPixel = pixelFlash, durationTicks = 60)
     }
 
     fun vWalkFlash() {
         println("V Walk flash")
-        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
-        nextProgPixel.white = 200.toByte()
-        vWalkFlash.flash(flashIntensity, flashPixel = nextProgPixel, durationTicks = 90)
+//        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
+//        nextProgPixel.white = 200.toByte()
+        vWalkFlash.flash(flashIntensity, flashPixel = pixelFlash, durationTicks = 90)
     }
 
     fun switchProgram() {
@@ -182,24 +211,21 @@ class Lighting {
             if (numStrips == 0)
                 return
 
-//            val timeTick = ((tick % 300) / 299.0)
-//            println(timeTick)
-
-//            val intTick = Math.floor(tick / 2.0)
             strips.forEach { strip ->
                 for (pos in pixelStartIdx until strip.length) {
 
                     when (currentProgram) {
-                        Lighting.Program.VGradient -> gradient.draw(programTick, strip, pos, pixel)
-                        Lighting.Program.HGradient -> hGradient.draw(programTick, strip, pos, pixel)
-                        Lighting.Program.Fire -> fireWw/*fire*/.draw(programTick, strip, pos, pixel)
-//                        Lighting.Program.Blend -> blend.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Purp -> purp.draw(programTick, strip, pos, pixel)
-//                        Lighting.Program.Walk -> walk.draw(tick, strip, pos, pixel)
-//                        Lighting.Program.Rain -> rain.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Earth -> earth.draw(tick, strip, pos, pixel)
-                        Lighting.Program.Sparkle -> fastTwinkle.draw(programTick, strip, pos, pixel)
-                        Lighting.Program.Rainbow -> rainbow.draw(programTick, strip, pos, pixel)
+                        Program.VGradient -> gradient.draw(programTick, strip, pos, pixel)
+                        Program.HGradient -> hGradient.draw(programTick, strip, pos, pixel)
+                        Program.Fire -> fireWw/*fire*/.draw(programTick, strip, pos, pixel)
+//                        Lighting.Program.Blend -> blend.draw(programTick, strip, pos, pixel)
+                        Program.Purp -> purp.draw(programTick, strip, pos, pixel)
+//                        Lighting.Program.Walk -> walk.draw(programTick, strip, pos, pixel)
+//                        Lighting.Program.Rain -> rain.draw(programTick, strip, pos, pixel)
+                        Program.Earth -> earth.draw(programTick, strip, pos, pixel)
+                        Program.Sparkle -> fastTwinkle.draw(programTick, strip, pos, pixel)
+                        Program.Rainbow -> rainbow.draw(programTick, strip, pos, pixel)
+                        Program.Off -> pixel.setColor(pixelOff)
                     }
 //                    fastTwinkle.draw(tick, strip, pos, pixel)
 
@@ -209,85 +235,12 @@ class Lighting {
 //                    gradient.draw(tick, strip, pos, pixel)
 //                    twinkle.draw(tick, strip, pos, pixel)
 //                    blend.draw(tick, strip, pos, pixel)
-
-//                    if (tick % 240L == 0L) {
-//                    }
                     flash.draw(tick, strip, pos, pixel)
                     walkFlash.draw(tick, strip, pos, pixel)
                     vWalkFlash.draw(tick, strip, pos, pixel)
                     pulse.draw(tick, strip, pos, pixel)
 //                    fastTwinkle.draw(tick, strip, pos, pixel)
                     strip.setPixel(pixel, pos)
-                    // Barber pole style
-//                    val pos2: Long = ((pos + intTick) % 9).toLong()
-
-//                    val t = 2 * Math.PI * (tick / 30f) + ((pos2 / 8.0) * 2 * Math.PI)
-//                    val sin = 0.5 + (0.5 * Math.sin(t))
-//                    val sin = Math.max(0.0, Math.sin(t))
-
-//                    pixel.pro.dbro.lighting.tween(pixelBright, sin)
-//                    strip.setPixel(pixel, pos)
-
-//                    when (pos2) {
-//                        0L -> {
-//                            pixel.pro.dbro.lighting.tween(pixelBright, 1.0)
-//                            strip.setPixel(pixelBright, pos)
-//                        }
-//                        1L, 8L -> {
-//                            pixel.pro.dbro.lighting.tween(pixelBright, 0.4)
-//                            strip.setPixel(pixel, pos)
-//                        }
-//                        2L, 7L -> {
-//                            pixel.pro.dbro.lighting.tween(pixelBright, 0.2)
-//                            strip.setPixel(pixel, pos)
-//                        }
-//                        2 -> {
-//                            pixel.pro.dbro.lighting.tween(pixelFire, 0.6)
-//                        }
-//                        3 -> {
-//                            pixel.pro.dbro.lighting.tween(pixelFire, 0.4)
-//                        }
-//                        4 -> {
-//                            pixel.pro.dbro.lighting.tween(pixelFire, 0.2)
-//                        }
-//                        5 -> {
-//                            pixel.pro.dbro.lighting.tween(pixelFire, 0.0)
-//                        }
-//                        else -> {
-//                            strip.setPixel(pixelOff, pos)
-//                        }
-//                    }
-
-                    // Frigonometry
-//                    val seed = pixelSeed[pos - 13]
-//                    val t = seed + 2 * Math.PI * ((tick + (Math.random() - 0.5)) / 60f)
-//                    val sin = Math.max(0.0, (0.75 * Math.sin(t)) + (0.5 * rand - 0.25))
-//                    val cos = 0.5 + (0.5 * Math.cos(t))
-//
-//                    if (seed < 0.5) {
-//                        val sin = Math.max(0.0, (0.75 * Math.sin(t)))// + (0.5 * rand - 0.25))
-//                        pixel.pro.dbro.lighting.tween(pixelFire, sin)
-//                    } else {
-//                        val cos = Math.max(0.0, (0.75 * Math.cos(t)))// + (0.5 * rand - 0.25))
-//                        pixel.pro.dbro.lighting.tween(pixelRedFire, cos)
-//                    }
-//
-//                    if (Math.random() > 0.97) {
-//                        pixelSeed[pos - 13] = Math.random() * Math.PI * 2
-//                    }
-
-                    // Longitudal gradient
-//                    val scaleFactor = (pos.toDouble() - pixelStartIdx) / (strip.length - pixelStartIdx)
-//                    pixel.tween(
-//                            pixelRed,
-//                            scaleFactor,
-//                            pixelFire,
-//                            1.0 - scaleFactor)
-
-//                    pixel.pro.dbro.lighting.tween(pixelFire, (tick % 30) / 30.0)
-
-//                    pixel.pro.dbro.lighting.tween(pixelFire, 0.4)
-//                    strip.setPixel(pixel, pos)
                 }
             }
         }
@@ -303,11 +256,15 @@ fun clamp(value: Double, min: Double, max: Double): Double {
     return Math.max(min, Math.min(value, max))
 }
 
+var programTickFreeze = false
+
 var programTickAdj = 1L
     set(value) {
         println("TickAdj $value")
         field = value
     }
+
+var programTickOffset = 0
 
 val controlServer = ControlServer()
 var controlServerMod = 1
@@ -329,13 +286,30 @@ public fun main(args: Array<String>) {
 
     val lighting = Lighting()
 
+    val input = MidiInput()
+    input.findMidiOuputDevice()?.let {
+        input.listenToDevice(it, object : MidiInput.MidiListener {
+            override fun onEvent(inputType: MidiInput.InputType,
+                                 inputId: Int,
+                                 eventType: MidiInput.EventType,
+                                 value: Float) {
+                handleMidiCommand(lighting, inputType, inputId, eventType, value)
+            }
+        })
+    }
+
+
     // Render thread
     Thread(Runnable {
         var tick = 0L
         var renderTick = 0L
         while (true) {
-            renderTick += programTickAdj
-            lighting.draw(tick++, renderTick)
+            synchronized(lighting) {
+                if (!programTickFreeze) {
+                    renderTick += programTickAdj
+                }
+                lighting.draw(tick++, renderTick + programTickOffset)
+            }
             Thread.sleep(16)
         }
     }).start()
@@ -349,7 +323,7 @@ public fun main(args: Array<String>) {
             val intensity = commandArr[1].toFloat()
             val command = commandArr[0]
             println("Activate with '$command' intensity $intensity")
-            handleCommand(lighting, command, intensity)
+            handleKeyCommand(lighting, command, intensity)
         }
 
         if (controlServerPing) {
@@ -373,11 +347,71 @@ public fun main(args: Array<String>) {
             i = lastCommand
         }
 
-        handleCommand(lighting, i)
+        handleKeyCommand(lighting, i)
     }
 }
 
-fun handleCommand(lighting: Lighting, command: String, intensity: Float = 0.8f) {
+val pixelWhite = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 255.toByte(), 255.toByte())
+var useWhitePixelForFlash = false
+
+fun handleMidiCommand(lighting: Lighting,
+                      inputType: MidiInput.InputType,
+                      inputId: Int,
+                      eventType: MidiInput.EventType,
+                      value: Float) {
+
+    synchronized(lighting) {
+        if (inputType == MidiInput.InputType.Slider) {
+            if (inputId == 8) {
+                // Time scale
+                programTickAdj = (value * 40f).toLong() - 20
+            } else if (inputId == 7) {
+                // Time offset
+                programTickOffset = ((value * 3000) - 1500).toInt()
+            } else if (inputId == 6) {
+                // HWalkFlash mod
+                lighting.walkFlash.pixelMod = (value * 10).toInt() + 1
+            } else if (inputId == 5) {
+                // Flash pixel hue
+                lighting.setFlashPixel(value, useWhitePixelForFlash)
+            }
+        } else if (inputType == MidiInput.InputType.Knob) {
+            //programTickOffset = ((value * 600) - 300).toInt()
+        } else if (inputType == MidiInput.InputType.Button) {
+            if (inputId == 8) {
+                // Time
+                println("Time buttton value $value")
+                programTickFreeze = (value == 0f)
+            } else if (inputId == 7) {
+                val on = value == 1f
+                if (on) {
+                    lighting.rainbow.mode = Rainbow.Mode.Vertical
+                } else {
+                    lighting.rainbow.mode = Rainbow.Mode.Strip
+                }
+            } else if (inputId == 5) {
+                // Toggle use of white LEDs in flash
+                useWhitePixelForFlash = value == 1f
+            }
+        } else {
+            when (inputId) {
+                2 -> lighting.walkFlash()
+                6 -> lighting.vWalkFlash()
+                3 -> lighting.flash(boostPixel = pixelWhite, intensity = value)
+                4 -> lighting.pulse(intensity = value)
+                7 -> lighting.flash(boostPixel = pixelWhite, intensity = 0.20f)
+                9 -> lighting.switchProgram(Lighting.Program.Earth)
+                10 -> lighting.switchProgram(Lighting.Program.Fire)
+                11 -> lighting.switchProgram(Lighting.Program.Purp)
+                12 -> lighting.switchProgram(Lighting.Program.Rainbow)
+                15 -> lighting.switchProgram(Lighting.Program.Sparkle)
+                16 -> lighting.switchProgram(Lighting.Program.Off)
+            }
+        }
+    }
+}
+
+fun handleKeyCommand(lighting: Lighting, command: String, intensity: Float = 0.8f) {
     when (command) {
         "'" -> {
             println("Major")
@@ -437,15 +471,6 @@ fun handleCommand(lighting: Lighting, command: String, intensity: Float = 0.8f) 
         }
     }
     lastCommand = command
-//        lighting.pulse()
-//        lighting.vWalkFlash()
-
-
-//        when (i) {
-//            "p" -> lighting.switchProgram()
-//            "w" -> lighting.walkFlash()
-//            else -> lighting.flash()
-//        }
 }
 
 fun randEffect(lighting: Lighting) {
