@@ -159,11 +159,22 @@ class Lighting {
         flash.flash(intensity, boostPixel = boostPixel, durationTicks = 120)
     }
 
-    fun walkFlash() {
+    fun walkFlash(stripIdMask: Int = 0b11111111, durationTicks: Long = 60) {
         println("H Walk flash")
 //        val nextProgPixel = Pixel(nextProgramCol[currentProgram])
 //        nextProgPixel.white = 200.toByte()
-        walkFlash.flash(flashIntensity, flashPixel = pixelFlash, durationTicks = 60)
+        walkFlash.flash(
+                intensity = flashIntensity,
+                flashPixel = pixelFlash,
+                durationTicks = durationTicks,
+                stripIdxMask = stripIdMask)
+    }
+
+    /**
+     * If [walkFlash] is called with durationTicks 0, decay will begin on this call
+     */
+    fun unWalkFlash(durationTicks: Long = 60) {
+        walkFlash.unFlash(durationTicks)
     }
 
     fun vWalkFlash() {
@@ -354,6 +365,10 @@ public fun main(args: Array<String>) {
 val pixelWhite = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 255.toByte(), 255.toByte())
 var useWhitePixelForFlash = false
 
+const val stripIdMaskNone: Int = 0b00000000
+const val stripIdMaskAll: Int = 0b11111111
+var stripIdMask: Int = stripIdMaskNone
+
 fun handleMidiCommand(lighting: Lighting,
                       inputType: MidiInput.InputType,
                       inputId: Int,
@@ -376,6 +391,11 @@ fun handleMidiCommand(lighting: Lighting,
                 lighting.setFlashPixel(value, useWhitePixelForFlash)
             }
         } else if (inputType == MidiInput.InputType.Knob) {
+            // Some of the knobs on this pad are pretty janky: Once
+            // actuated, they fire spurious events for a while.
+            // This can cause painful glitching. Probably have to filter
+            // this event before we use it.
+
             //programTickOffset = ((value * 600) - 300).toInt()
         } else if (inputType == MidiInput.InputType.Button) {
             if (inputId == 8) {
@@ -393,7 +413,7 @@ fun handleMidiCommand(lighting: Lighting,
                 // Toggle use of white LEDs in flash
                 useWhitePixelForFlash = value == 1f
             }
-        } else {
+        } else if (inputType == MidiInput.InputType.PadA) {
             when (inputId) {
                 2 -> lighting.walkFlash()
                 6 -> lighting.vWalkFlash()
@@ -406,6 +426,27 @@ fun handleMidiCommand(lighting: Lighting,
                 12 -> lighting.switchProgram(Lighting.Program.Rainbow)
                 15 -> lighting.switchProgram(Lighting.Program.Sparkle)
                 16 -> lighting.switchProgram(Lighting.Program.Off)
+            }
+        } else if (inputType == MidiInput.InputType.PadB) {
+            if (inputId < 9) {
+                // Trigger individual strips
+                val eventStripIdMask: Int = 1 shl (inputId - 1)
+                if (eventType == MidiInput.EventType.Press) {
+                    stripIdMask = stripIdMask or eventStripIdMask
+                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                } else if (eventType == MidiInput.EventType.Release) {
+                    stripIdMask = stripIdMask xor eventStripIdMask
+                    lighting.unWalkFlash()
+                }
+            } else if (inputId == 9) {
+                // Flash all
+                if (eventType == MidiInput.EventType.Press) {
+                    stripIdMask = stripIdMaskAll
+                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                } else if (eventType == MidiInput.EventType.Release) {
+                    stripIdMask = stripIdMaskNone
+                    lighting.unWalkFlash()
+                }
             }
         }
     }

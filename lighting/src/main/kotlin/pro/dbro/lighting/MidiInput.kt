@@ -39,12 +39,13 @@ import javax.sound.midi.*
  *   Pad 15 Release: 0x814700
  *   Pad 15 Hold:    0xD100 to 0xD17F
  *
+ *  Pad Bank A         Pad Bank B
  *  Pad 1
- *   Down - 0x903C
- *   Up   - 0x803C
+ *   Down - 0x903C      9224
+ *   Up   - 0x803C      8224
  *  Pad 2
- *   Down - 0x903E
- *   Up   - 0x803E
+ *   Down - 0x903E      9225
+ *   Up   - 0x803E      8225
  *  Pad 3
  *   Down - 0x9040
  *   Up   - 0x8040
@@ -84,11 +85,13 @@ import javax.sound.midi.*
  *  Pad 16
  *   Down  - 0x9148
  *   Up    - 0x8148
+ * Pad Bank B
+ *
  */
 class MidiInput {
 
     enum class InputType {
-        Slider, Button, Knob, Pad
+        Slider, Button, Knob, PadA, PadB
     }
 
     enum class EventType {
@@ -140,8 +143,8 @@ class MidiInput {
                 }
 
                 override fun send(message: MidiMessage?, timeStamp: Long) {
-                    //println("Message ${_message?.status} message with len ${_message?.length}: ${_message?.message?.toHex()}")
                     val data = message?.message ?: return
+                    println("Message ${message.status} message : ${data.toHex()}")
 
                     val normVal = if (data.size == 3) {
                         data[2] / 127f
@@ -182,7 +185,7 @@ class MidiInput {
                                 0x48.toByte() -> 8
                                 else -> 0
                             }
-                            listener.onEvent(InputType.Pad, padId, EventType.Press, normVal)
+                            listener.onEvent(InputType.PadA, padId, EventType.Press, normVal)
                         }
                         0x91.toByte() -> {
                             // Pads 9-16
@@ -197,7 +200,17 @@ class MidiInput {
                                 0x48.toByte() -> 16
                                 else -> 0
                             }
-                            listener.onEvent(InputType.Pad, padId, EventType.Press, normVal)
+                            listener.onEvent(InputType.PadA, padId, EventType.Press, normVal)
+                        }
+                        0x92.toByte() -> {
+                            // Pad bank b depress
+                            val padId = (b2 - 0x24) + 1
+                            listener.onEvent(InputType.PadB, padId, EventType.Press, normVal)
+                        }
+                        0x82.toByte() -> {
+                            // Pad bank b release
+                            val padId = (b2 - 0x24) + 1
+                            listener.onEvent(InputType.PadB, padId, EventType.Release, normVal)
                         }
                     }
                 }
