@@ -1,6 +1,7 @@
 package pro.dbro.lighting
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
+import kotlin.math.sin
 
 private val pixelOff = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 0.toByte(), 0.toByte())
 
@@ -74,4 +75,20 @@ fun Pixel.boost(boost: Pixel) {
         this.blue = (this.blue + boost.blue).toByte()
         this.white = (this.white + boost.white).toByte()
         this.orange = (this.orange + boost.orange).toByte()
+}
+
+/**
+ * The period of [t] is [0, 2*Pi]
+ */
+fun Pixel.rainbow(t: Double) {
+
+    val red = sin(t) * 127 + 128
+    val green = sin(t + 2) * 127 + 128
+    val blue = sin(t + 4) * 127 + 128
+
+    this.red = red.toByte()
+    this.green = green.toByte()
+    this.blue = blue.toByte()
+    this.white = 0
+    this.orange = 0
 }

@@ -91,7 +91,7 @@ import javax.sound.midi.*
 class MidiInput {
 
     enum class InputType {
-        Slider, Button, Knob, PadA, PadB
+        Slider, Button, Knob, PadA, PadB, PadC
     }
 
     enum class EventType {
@@ -203,15 +203,28 @@ class MidiInput {
                             listener.onEvent(InputType.PadA, padId, EventType.Press, normVal)
                         }
                         0x92.toByte() -> {
-                            // Pad bank b depress
-                            val padId = (b2 - 0x24) + 1
-                            listener.onEvent(InputType.PadB, padId, EventType.Press, normVal)
+                            if (b2 > 0x33) {
+                                // Pad bank c depress
+                                val padId = (b2 - 0x34) + 1
+                                listener.onEvent(InputType.PadC, padId, EventType.Press, normVal)
+                            } else {
+                                // Pad bank b depress
+                                val padId = (b2 - 0x24) + 1
+                                listener.onEvent(InputType.PadB, padId, EventType.Press, normVal)
+                            }
                         }
                         0x82.toByte() -> {
-                            // Pad bank b release
-                            val padId = (b2 - 0x24) + 1
-                            listener.onEvent(InputType.PadB, padId, EventType.Release, normVal)
+                            if (b2 > 0x33) {
+                                // Pad bank c release
+                                val padId = (b2 - 0x34) + 1
+                                listener.onEvent(InputType.PadC, padId, EventType.Release, normVal)
+                            } else {
+                                // Pad bank b release
+                                val padId = (b2 - 0x24) + 1
+                                listener.onEvent(InputType.PadB, padId, EventType.Release, normVal)
+                            }
                         }
+
                     }
                 }
             }

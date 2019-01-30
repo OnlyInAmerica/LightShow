@@ -21,6 +21,7 @@ sourceSets {
 }
 
 dependencies {
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     compile 'org.processing:core:3.3.7'
     compile 'org.robolectric:junit:4.0-alpha-3'

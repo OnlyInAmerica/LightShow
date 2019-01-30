@@ -2,6 +2,9 @@ package pro.dbro.lighting
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 import com.heroicrobot.dropbit.registry.DeviceRegistry
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import pro.dbro.lighting.effects.*
 import java.util.*
 import kotlin.collections.ArrayList
@@ -233,6 +236,11 @@ class Lighting {
                 return
 
             strips.forEach { strip ->
+
+                if (cycleFlashPixelHue) {
+                    pixelFlash.rainbow(2 * Math.PI * (tick / 60.toFloat()) + (strip.stripNumber / 7f) * 2 * Math.PI)
+                }
+
                 for (pos in pixelStartIdx until strip.length) {
 
                     when (currentProgram) {
@@ -374,9 +382,14 @@ public fun main(args: Array<String>) {
 
 val pixelWhite = Pixel(0.toByte(), 0.toByte(), 0.toByte(), 255.toByte(), 255.toByte())
 var useWhitePixelForFlash = false
+var cycleFlashPixelHue = false
 
 const val stripIdMaskNone: Int = 0b00000000
 const val stripIdMaskAll: Int = 0b11111111
+
+const val crescendoStepMinMs = 10
+const val crescendoStepMaxMs = 250
+var crescendoStepMs: Int = 60
 
 fun handleMidiCommand(lighting: Lighting,
                       inputType: MidiInput.InputType,
@@ -398,6 +411,11 @@ fun handleMidiCommand(lighting: Lighting,
             } else if (inputId == 5) {
                 // Flash pixel hue
                 lighting.setFlashPixel(value, useWhitePixelForFlash)
+            } else if (inputId == 4) {
+                // Crescendo interval
+                crescendoStepMs =
+                        (((crescendoStepMaxMs - crescendoStepMinMs) * value)
+                                + crescendoStepMinMs).toInt()
             }
         } else if (inputType == MidiInput.InputType.Knob) {
             // Some of the knobs on this pad are pretty janky: Once
@@ -418,9 +436,12 @@ fun handleMidiCommand(lighting: Lighting,
                 } else {
                     lighting.rainbow.mode = Rainbow.Mode.Strip
                 }
-            } else if (inputId == 5) {
+            } else if (inputId == 4) {
                 // Toggle use of white LEDs in flash
                 useWhitePixelForFlash = value == 1f
+            } else if (inputId == 5) {
+                // Cycle hue vs keep static
+                cycleFlashPixelHue = value == 1f
             }
         } else if (inputType == MidiInput.InputType.PadA) {
             when (inputId) {
@@ -462,6 +483,48 @@ fun handleMidiCommand(lighting: Lighting,
                     lighting.walkFlash(stripIdMaskAll, durationTicks = 0L)
                 } else if (eventType == MidiInput.EventType.Release) {
                     lighting.unWalkFlash(stripIdMask = stripIdMaskAll)
+                }
+            }
+        } else if (inputType == MidiInput.InputType.PadC) {
+            if (inputId == 1) {
+                // Left to Right Crescendo
+                for (i in 0 until maxStrips) {
+                    val stripIdMask = 1 shl i
+                    GlobalScope.launch {
+                        delay(crescendoStepMs * (i + 1L))
+                        lighting.walkFlash(stripIdMask)
+                    }
+                }
+            } else if (inputId == 4) {
+                // Right to Left Crescendo
+                for (i in 0 until maxStrips) {
+                    val stripIdMask = 1 shl (maxStrips - 1 - i)
+                    GlobalScope.launch {
+                        delay(crescendoStepMs * (i + 1L))
+                        lighting.walkFlash(stripIdMask)
+                    }
+                }
+            } else if (inputId == 2) {
+                // Middle out Crescendo
+                val midPt = (maxStrips - 1) / 2
+                for (i in 0..midPt) {
+                    val stripIdMask = (1 shl (midPt + 1 + i)) or
+                            (1 shl (midPt - i))
+                    GlobalScope.launch {
+                        delay(crescendoStepMs * (i + 1L))
+                        lighting.walkFlash(stripIdMask)
+                    }
+                }
+            } else if (inputId == 3) {
+                // Edges in Crescendo
+                val midPt = (maxStrips - 1) / 2
+                for (i in 0..midPt) {
+                    val stripIdMask = (1 shl i) or
+                            (1 shl (maxStrips - 1 - i))
+                    GlobalScope.launch {
+                        delay(crescendoStepMs * (i + 1L))
+                        lighting.walkFlash(stripIdMask)
+                    }
                 }
             }
         }
