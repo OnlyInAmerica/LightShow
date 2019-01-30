@@ -438,8 +438,21 @@ fun handleMidiCommand(lighting: Lighting,
                     stripIdMask = stripIdMask xor eventStripIdMask
                     lighting.unWalkFlash()
                 }
-            } else if (inputId == 9) {
-                // Flash all
+            } else if (inputId <= 12) {
+                // Trigger strip pairs
+                val firstStripIdx = inputId - 9
+                val eventStripIdMask: Int =
+                        (1 shl (firstStripIdx * 2)) or
+                                (1 shl (firstStripIdx * 2 + 1))
+                if (eventType == MidiInput.EventType.Press) {
+                    stripIdMask = stripIdMask or eventStripIdMask
+                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                } else if (eventType == MidiInput.EventType.Release) {
+                    stripIdMask = stripIdMask xor eventStripIdMask
+                    lighting.unWalkFlash()
+                }
+            } else if (inputId == 15) {
+                // Trigger all
                 if (eventType == MidiInput.EventType.Press) {
                     stripIdMask = stripIdMaskAll
                     lighting.walkFlash(stripIdMask, durationTicks = 0L)
