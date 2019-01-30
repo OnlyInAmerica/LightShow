@@ -7,6 +7,15 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.sin
 
+const val maxStrips = 8
+
+fun forEachInBitMask(bitSet: Int, iterator: (Int) -> Unit) {
+    for (stripId in 0 until maxStrips) {
+        if (bitSet and (1 shl stripId) != 0) {
+            iterator.invoke(stripId)
+        }
+    }
+}
 
 class Lighting {
 
@@ -173,8 +182,9 @@ class Lighting {
     /**
      * If [walkFlash] is called with durationTicks 0, decay will begin on this call
      */
-    fun unWalkFlash(durationTicks: Long = 60) {
-        walkFlash.unFlash(durationTicks)
+    fun unWalkFlash(durationTicks: Long = 60,
+                    stripIdMask: Int) {
+        walkFlash.unFlash(durationTicks, stripIdMask)
     }
 
     fun vWalkFlash() {
@@ -367,7 +377,6 @@ var useWhitePixelForFlash = false
 
 const val stripIdMaskNone: Int = 0b00000000
 const val stripIdMaskAll: Int = 0b11111111
-var stripIdMask: Int = stripIdMaskNone
 
 fun handleMidiCommand(lighting: Lighting,
                       inputType: MidiInput.InputType,
@@ -432,11 +441,9 @@ fun handleMidiCommand(lighting: Lighting,
                 // Trigger individual strips
                 val eventStripIdMask: Int = 1 shl (inputId - 1)
                 if (eventType == MidiInput.EventType.Press) {
-                    stripIdMask = stripIdMask or eventStripIdMask
-                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                    lighting.walkFlash(eventStripIdMask, durationTicks = 0L)
                 } else if (eventType == MidiInput.EventType.Release) {
-                    stripIdMask = stripIdMask xor eventStripIdMask
-                    lighting.unWalkFlash()
+                    lighting.unWalkFlash(stripIdMask = eventStripIdMask)
                 }
             } else if (inputId <= 12) {
                 // Trigger strip pairs
@@ -445,20 +452,16 @@ fun handleMidiCommand(lighting: Lighting,
                         (1 shl (firstStripIdx * 2)) or
                                 (1 shl (firstStripIdx * 2 + 1))
                 if (eventType == MidiInput.EventType.Press) {
-                    stripIdMask = stripIdMask or eventStripIdMask
-                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                    lighting.walkFlash(eventStripIdMask, durationTicks = 0L)
                 } else if (eventType == MidiInput.EventType.Release) {
-                    stripIdMask = stripIdMask xor eventStripIdMask
-                    lighting.unWalkFlash()
+                    lighting.unWalkFlash(stripIdMask = eventStripIdMask)
                 }
             } else if (inputId == 15) {
                 // Trigger all
                 if (eventType == MidiInput.EventType.Press) {
-                    stripIdMask = stripIdMaskAll
-                    lighting.walkFlash(stripIdMask, durationTicks = 0L)
+                    lighting.walkFlash(stripIdMaskAll, durationTicks = 0L)
                 } else if (eventType == MidiInput.EventType.Release) {
-                    stripIdMask = stripIdMaskNone
-                    lighting.unWalkFlash()
+                    lighting.unWalkFlash(stripIdMask = stripIdMaskAll)
                 }
             }
         }

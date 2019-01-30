@@ -1,23 +1,29 @@
 package pro.dbro.lighting.effects
 
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
+
 import com.heroicrobot.dropbit.devices.pixelpusher.Strip
 import pro.dbro.lighting.Effect
 import pro.dbro.lighting.ceil
+import pro.dbro.lighting.forEachInBitMask
 import pro.dbro.lighting.tween
+
+typealias StripId = Int
 
 class HorizontalWalkFlash(var pixelMod: Int = 9) : Effect {
 
-    var flashPixel: Pixel? = null
-    var flashDurationTicks = 0L
-    var flashPeriodTicks = 0L
-    var flashStartTick = 0L
-    var flashMaxIntensity = 0f
-    var flashCurIntensity = 0f
-    var stripIdMask: Int = 0b11111111
+    data class Instance(val intensity: Float,
+                        var durationTicks: Long = 60,
+                        val periodTicks: Long = 60,
+                        var pixel: Pixel? = null,
+                        var maxIntensity: Float = intensity,
+                        var curIntensity: Float = intensity,
+                        var startTick: Long = 0)
+
+    var instanceMap = HashMap<StripId, Instance>()
 
     /**
-     * @param durationTicks if is 0, flash should not begin release until [unFlash] called
+     * @param durationTicks flash duration. If 0, flash should not begin release until [unFlash] called.
      */
     fun flash(intensity: Float,
               durationTicks: Long = 60,
@@ -25,50 +31,55 @@ class HorizontalWalkFlash(var pixelMod: Int = 9) : Effect {
               flashPixel: Pixel? = null,
               stripIdxMask: Int) {
 
-        reset()
-        flashMaxIntensity = intensity
-        flashCurIntensity = intensity
-        flashDurationTicks = durationTicks
-        flashPeriodTicks = periodTicks
-        this.flashPixel = flashPixel
-        this.stripIdMask = stripIdxMask
+        forEachInBitMask(stripIdxMask) { stripId ->
+            instanceMap[stripId] =
+                    Instance(intensity,
+                            durationTicks,
+                            periodTicks,
+                            flashPixel)
+        }
+
     }
 
-    fun unFlash(durationTicks: Long = 60) {
-        this.flashStartTick = 0
-        this.flashDurationTicks = durationTicks
+    fun unFlash(durationTicks: Long = 60,
+                stripIdxMask: Int) {
+
+        forEachInBitMask(stripIdxMask) { stripId ->
+            val instance = instanceMap[stripId] ?: return@forEachInBitMask
+            instance.startTick = 0
+            instance.durationTicks = durationTicks
+        }
     }
 
     override fun draw(tick: Long, strip: Strip, stripIdx: Int, pixel: Pixel) {
-        if (stripIdMask and (1 shl strip.stripNumber) == 0) {
-            return
-        }
 
-        if (flashMaxIntensity > 0) {
-            if (flashStartTick == 0L) {
+        val i = instanceMap[strip.stripNumber] ?: return
+
+        if (i.maxIntensity > 0) {
+            if (i.startTick == 0L) {
                 // First flash draw
-                flashStartTick = tick
+                i.startTick = tick
 
-                if (flashPixel == null) {
-                    flashPixel = pixel.ceil()
+                if (i.pixel == null) {
+                    i.pixel = pixel.ceil()
                 }
             }
 
-            flashPixel?.let {
+            i.pixel?.let {
                 val group = stripIdx % pixelMod
 
-                val groupId = ((group + (tick / (flashPeriodTicks.toFloat() / pixelMod))) % pixelMod).toInt()
+                val groupId = ((group + (tick / (i.periodTicks.toFloat() / pixelMod))) % pixelMod).toInt()
 
                 if (groupId == 0) {
-                    pixel.tween(pixel, 1f - flashCurIntensity, it, flashCurIntensity)
+                    pixel.tween(pixel, 1f - i.curIntensity, it, i.curIntensity)
                 }
             }
 
-            if (flashDurationTicks > 0) {
-                flashCurIntensity = decay(tick - flashStartTick, flashMaxIntensity, -flashMaxIntensity, flashDurationTicks)
-                if (flashCurIntensity < 0.01f) {
+            if (i.durationTicks > 0) {
+                i.curIntensity = decay(tick - i.startTick, i.maxIntensity, -i.maxIntensity, i.durationTicks)
+                if (i.curIntensity < 0.01f) {
                     // Last flash draw
-                    reset()
+                    instanceMap.remove(strip.stripNumber)
                 }
             }
         }
@@ -77,10 +88,5 @@ class HorizontalWalkFlash(var pixelMod: Int = 9) : Effect {
     private fun decay(elapsedTime: Long, start: Float, delta: Float, duration: Long): Float {
         val time = (elapsedTime / duration.toFloat()) - 1
         return delta * (time * time * time * time * time + 1) + start
-    }
-
-    private fun reset() {
-        flashMaxIntensity = 0f
-        flashStartTick = 0L
     }
 }
