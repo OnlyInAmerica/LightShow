@@ -103,7 +103,7 @@ class Lighting {
 
     private val pixelStartIdx = 0
 
-    private var intensityCeil = 1f
+    private var intensityCeil = 0f
 
     init {
         registry.addObserver(observer)
