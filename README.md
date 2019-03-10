@@ -12,8 +12,7 @@ A program to generate LED patterns for PixelPusher.
 ## Command Server
 
 Listens for UDP datagrams on port 8422.
-Each datagram contains UTF-8 data of the form: `<command>`,
-with some commands allowing a float intensity value given by `<command>,<intensity>`.
+Each datagram contains UTF-8 data following the table below:
 
 Current commands:
 
@@ -22,7 +21,7 @@ Current commands:
 | `'`            | Switch program with random transition effect |
 | `f`            | small flash   |
 | `g`            | large flash   |
-| `u`            | pulse         |
+| `u`            | pulse, can take optional intensity float e.g: `u,0.4`         |
 | `w`            | horizontal walk |
 | `v`            | vertical walk |
 | `s`            | Switch to Sparkle program with random transition effect |

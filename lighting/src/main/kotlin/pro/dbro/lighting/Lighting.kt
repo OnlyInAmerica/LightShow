@@ -367,7 +367,7 @@ public fun main(args: Array<String>) {
 
         fun activate(command: String) {
             val commandArr = command.split(",")
-            val intensity = commandArr[1].toFloat()
+            val intensity = if (commandArr.size == 2) commandArr[1].toFloat() else 1f
             val command = commandArr[0]
             println("Activate with '$command' intensity $intensity")
             handleKeyCommand(lighting, command, intensity)
