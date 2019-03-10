@@ -13,7 +13,7 @@ class ControlServer {
 
     fun listen() {
         socket = DatagramSocket(listenPort)
-        println("Command server bound: ${socket.isBound} port: $listenPort")
+        println("Control server bound: ${socket.isBound} port: $listenPort")
 
         val recvBuffer = ByteArray(1024)
         val receivePacket = DatagramPacket(recvBuffer, 0, recvBuffer.size)
