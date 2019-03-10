@@ -103,6 +103,8 @@ class Lighting {
 
     private val pixelStartIdx = 0
 
+    private var intensityCeil = 1f
+
     init {
         registry.addObserver(observer)
     }
@@ -155,6 +157,16 @@ class Lighting {
             pixelFlash.white = 0
             pixelFlash.orange = 0
         }
+    }
+
+    fun setFlashPixelWhite(value: Float) {
+        val white = value * 255
+        pixelFlash.white = white.toByte()
+    }
+
+    fun setFlashPixelOrange(value: Float) {
+        val orange = value * 255
+        pixelFlash.orange = orange.toByte()
     }
 
     fun smallFlash() {
@@ -213,6 +225,11 @@ class Lighting {
         pulse.pulse(intensity = intensity, boostPixel = smallBoost)
     }
 
+    fun setIntensityCeiling(intensity: Float) {
+        // Save this value
+        intensityCeil = 1f - intensity
+    }
+
     /**
      *
      * @param tick should be regular and monotonic. Used for transitions.
@@ -269,6 +286,7 @@ class Lighting {
                     vWalkFlash.draw(tick, strip, pos, pixel)
                     pulse.draw(tick, strip, pos, pixel)
 //                    fastTwinkle.draw(tick, strip, pos, pixel)
+                    pixel.tween(pixel, 1f - intensityCeil, pixelOff, intensityCeil)
                     strip.setPixel(pixel, pos)
                 }
             }
@@ -412,10 +430,18 @@ fun handleMidiCommand(lighting: Lighting,
                 // Flash pixel hue
                 lighting.setFlashPixel(value, useWhitePixelForFlash)
             } else if (inputId == 4) {
+                // Flash pixel White
+                lighting.setFlashPixelWhite(value)
+            } else if (inputId == 3) {
+                // Flash pixel Orange
+                lighting.setFlashPixelOrange(value)
+            } else if (inputId == 2) {
                 // Crescendo interval
                 crescendoStepMs =
                         (((crescendoStepMaxMs - crescendoStepMinMs) * value)
                                 + crescendoStepMinMs).toInt()
+            } else if (inputId == 1) {
+                lighting.setIntensityCeiling(value)
             }
         } else if (inputType == MidiInput.InputType.Knob) {
             // Some of the knobs on this pad are pretty janky: Once
@@ -445,15 +471,37 @@ fun handleMidiCommand(lighting: Lighting,
             }
         } else if (inputType == MidiInput.InputType.PadA) {
             when (inputId) {
-                2 -> lighting.walkFlash()
-                6 -> lighting.vWalkFlash()
-                3 -> lighting.flash(boostPixel = pixelWhite, intensity = value)
-                4 -> lighting.pulse(intensity = value)
-                7 -> lighting.flash(boostPixel = pixelWhite, intensity = 0.20f)
+                1 -> lighting.walkFlash()
+                2 -> lighting.vWalkFlash()
+                3 -> {
+                    // Left to Right Crescendo
+                    for (i in 0 until maxStrips) {
+                        val stripIdMask = 1 shl i
+                        GlobalScope.launch {
+                            delay(crescendoStepMs * (i + 1L))
+                            lighting.walkFlash(stripIdMask)
+                        }
+                    }
+                }
+                4 -> {
+                    // Trigger all
+                    if (eventType == MidiInput.EventType.Press) {
+                        lighting.walkFlash(stripIdMaskAll, durationTicks = 0L)
+                    } else if (eventType == MidiInput.EventType.Release) {
+                        lighting.unWalkFlash(stripIdMask = stripIdMaskAll)
+                    }
+                }
+
+                5 -> lighting.pulse(intensity = value)
+                6 -> lighting.flash(boostPixel = pixelWhite, intensity = 0.20f)
+                7 -> lighting.flash(boostPixel = pixelWhite, intensity = .6f)
+                8 -> lighting.flash(boostPixel = pixelWhite, intensity = 1f)
+
                 9 -> lighting.switchProgram(Lighting.Program.Earth)
                 10 -> lighting.switchProgram(Lighting.Program.Fire)
                 11 -> lighting.switchProgram(Lighting.Program.Purp)
                 12 -> lighting.switchProgram(Lighting.Program.Rainbow)
+
                 15 -> lighting.switchProgram(Lighting.Program.Sparkle)
                 16 -> lighting.switchProgram(Lighting.Program.Off)
             }

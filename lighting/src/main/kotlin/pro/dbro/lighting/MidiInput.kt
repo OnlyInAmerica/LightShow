@@ -187,6 +187,22 @@ class MidiInput {
                             }
                             listener.onEvent(InputType.PadA, padId, EventType.Press, normVal)
                         }
+                        0x80.toByte() -> {
+                            // Pads 1-8 release
+                            val padId = when (b2) {
+                                0x3C.toByte() -> 1
+                                0x3E.toByte() -> 2
+                                0x40.toByte() -> 3
+                                0x41.toByte() -> 4
+                                // These effects don't work well with release
+//                                0x43.toByte() -> 5
+//                                0x45.toByte() -> 6
+//                                0x47.toByte() -> 7
+//                                0x48.toByte() -> 8
+                                else -> 0
+                            }
+                            listener.onEvent(InputType.PadA, padId, EventType.Release, normVal)
+                        }
                         0x91.toByte() -> {
                             // Pads 9-16
                             val padId = when (b2) {
