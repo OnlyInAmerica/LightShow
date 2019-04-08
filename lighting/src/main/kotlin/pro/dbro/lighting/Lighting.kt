@@ -97,8 +97,6 @@ class Lighting {
 
     private val ticksPerTween = 30.0
 
-    private val pixelSeed = ArrayList<Double>(240)
-
     private var didSetup = false
 
     private val pixelStartIdx = 0
@@ -121,10 +119,7 @@ class Lighting {
     }
 
     private fun setup() {
-        val strips = registry.strips
-        for (pos in pixelStartIdx until strips.first().length) {
-            pixelSeed.add(Math.random() * Math.PI * 2)
-        }
+        // Any setup needed before first draw
     }
 
     var flashIntensity = 0.8f
@@ -350,14 +345,26 @@ public fun main(args: Array<String>) {
     Thread(Runnable {
         var tick = 0L
         var renderTick = 0L
+
+        // Render stats
+        val printRenderStats = true
+        var renderStart = 0L
+        var thisRenderTime = 0L
         while (true) {
+            renderStart = System.currentTimeMillis()
             synchronized(lighting) {
                 if (!programTickFreeze) {
                     renderTick += programTickAdj
                 }
                 lighting.draw(tick++, renderTick + programTickOffset)
             }
-            Thread.sleep(16)
+            thisRenderTime = (System.currentTimeMillis() - renderStart)
+            if (printRenderStats && tick % 60 == 0L) {
+                println("$thisRenderTime ms per frame")
+            }
+            if (thisRenderTime < 16) {
+                Thread.sleep(16 - thisRenderTime)
+            }
         }
     }).start()
 
