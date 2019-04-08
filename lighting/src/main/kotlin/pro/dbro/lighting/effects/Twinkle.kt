@@ -3,6 +3,7 @@ package pro.dbro.lighting.effects
 import com.heroicrobot.dropbit.devices.pixelpusher.Pixel
 import com.heroicrobot.dropbit.devices.pixelpusher.Strip
 import pro.dbro.lighting.Effect
+import pro.dbro.lighting.PixelMap
 import pro.dbro.lighting.tween
 
 class Twinkle(
@@ -14,25 +15,12 @@ class Twinkle(
         var periodTicks: Long = 60
 ) : Effect {
 
-    val pixelSeed = HashMap<String, Float>(240)
-
-    private fun keyForStrip(strip: Strip, pos: Int): String {
-        return "${strip.macAddress}-${strip.stripNumber}-$pos"
-    }
-
-    private fun getOrMakeSeed(key: String): Float {
-        return if (!pixelSeed.contains(key)) {
-            val rand = Math.random().toFloat()
-            pixelSeed[key] = rand
-            rand
-        } else {
-            pixelSeed[key]!!
-        }
+    val pixelSeed = PixelMap {
+        return@PixelMap Math.random().toFloat()
     }
 
     override fun draw(tick: Long, strip: Strip, stripIdx: Int, pixel: Pixel) {
-        val key = keyForStrip(strip, stripIdx)
-        val seed = getOrMakeSeed(key)
+        val seed = pixelSeed.get(strip, stripIdx)
 
         val flickerOrReseed: Boolean = tick % flickerReseedMod.toLong() == 0L
 
@@ -55,7 +43,7 @@ class Twinkle(
         }
 
         if (flickerOrReseed && Math.random() < reseedProbability) {
-            pixelSeed[key] = (Math.random() * Math.PI * 2).toFloat()
+            pixelSeed.set(strip, stripIdx, (Math.random() * Math.PI * 2).toFloat())
         }
     }
 }
